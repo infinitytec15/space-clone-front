@@ -95,6 +95,7 @@ const ChartSection: React.FC<ChartSectionProps> = ({
     selectedFilters.neighborhood || "Todos",
   );
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("demographic");
 
   // Opções de cidades e bairros (simuladas)
@@ -144,20 +145,40 @@ const ChartSection: React.FC<ChartSectionProps> = ({
   // Função para buscar dados com base na cidade e bairro selecionados
   const fetchData = async (city: string, neighborhood: string) => {
     setIsLoading(true);
+    setError(null);
     try {
       // Simulação de chamada de API - em um cenário real, isso seria uma chamada fetch
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      await new Promise((resolve, reject) => {
+        // Simulação de erro aleatório (10% de chance)
+        const shouldFail = Math.random() < 0.1;
+        if (shouldFail) {
+          setTimeout(
+            () => reject(new Error("Falha na conexão com o servidor")),
+            800,
+          );
+        } else {
+          setTimeout(resolve, 800);
+        }
+      });
 
       // Aqui você faria a chamada real para sua API
       // const response = await fetch(`/api/data?city=${city}&neighborhood=${neighborhood}`);
+      // if (!response.ok) {
+      //   throw new Error(`Erro ${response.status}: ${response.statusText}`);
+      // }
       // const data = await response.json();
 
       // Por enquanto, apenas simulamos dados diferentes para cada cidade
       console.log(`Dados carregados para ${city}, ${neighborhood}`);
 
       // Em um cenário real, você atualizaria o estado com os dados recebidos
-    } catch (error) {
-      console.error("Erro ao buscar dados:", error);
+    } catch (err) {
+      console.error("Erro ao buscar dados:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Erro desconhecido ao carregar dados",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -272,8 +293,27 @@ const ChartSection: React.FC<ChartSectionProps> = ({
       <CardContent>
         {isLoading ? (
           <div className="h-[200px] flex items-center justify-center">
-            <div className="animate-pulse text-blue-600">
-              Carregando dados...
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="text-blue-600 font-medium">
+                Carregando dados...
+              </div>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="h-[200px] flex items-center justify-center">
+            <div className="flex flex-col items-center gap-2 text-center max-w-md">
+              <AlertTriangle className="h-8 w-8 text-red-500" />
+              <div className="text-red-500 font-medium">
+                Erro ao carregar dados
+              </div>
+              <p className="text-sm text-gray-600">{error}</p>
+              <button
+                onClick={() => fetchData(selectedCity, selectedNeighborhood)}
+                className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Tentar novamente
+              </button>
             </div>
           </div>
         ) : (
@@ -282,7 +322,7 @@ const ChartSection: React.FC<ChartSectionProps> = ({
             onValueChange={setActiveTab}
             className="w-full"
           >
-            <TabsList className="grid grid-cols-4 mb-4 bg-slate-100">
+            <TabsList className="grid grid-cols-4 mb-4 bg-slate-100 relative">
               <TabsTrigger
                 value="demographic"
                 className="data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm"
@@ -313,7 +353,7 @@ const ChartSection: React.FC<ChartSectionProps> = ({
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="demographic" className="mt-0">
+            <TabsContent value="demographic" className="mt-0 relative">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Distribuição por Idade */}
                 <div className="h-[200px] flex items-center justify-center">
@@ -517,67 +557,221 @@ const ChartSection: React.FC<ChartSectionProps> = ({
               </div>
             </TabsContent>
 
-            <TabsContent value="economic" className="mt-0">
-              <div className="h-[200px] flex items-center justify-center">
-                <div className="w-full">
-                  <h3 className="text-sm font-medium mb-2">Tendência Mensal</h3>
-                  <div className="relative h-[150px] w-full">
-                    <svg
-                      className="w-full h-full"
-                      viewBox="0 0 300 100"
-                      preserveAspectRatio="none"
-                    >
-                      <polyline
-                        points={lineChartData.data
-                          .map((value, index) => {
-                            const x =
-                              (index / (lineChartData.data.length - 1)) * 300;
-                            const y =
-                              100 -
-                              ((value - Math.min(...lineChartData.data)) /
-                                (Math.max(...lineChartData.data) -
-                                  Math.min(...lineChartData.data))) *
-                                80;
-                            return `${x},${y}`;
-                          })
-                          .join(" ")}
-                        fill="none"
-                        stroke="#3b82f6"
-                        strokeWidth="2"
-                      />
-                      {lineChartData.data.map((value, index) => {
-                        const x =
-                          (index / (lineChartData.data.length - 1)) * 300;
-                        const y =
-                          100 -
-                          ((value - Math.min(...lineChartData.data)) /
-                            (Math.max(...lineChartData.data) -
-                              Math.min(...lineChartData.data))) *
-                            80;
-                        return (
-                          <circle
+            <TabsContent value="economic" className="mt-0 relative">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Tendência Mensal */}
+                <div className="h-[200px] flex items-center justify-center">
+                  <div className="w-full">
+                    <h3 className="text-sm font-medium mb-2">
+                      Tendência Mensal
+                    </h3>
+                    <div className="relative h-[150px] w-full">
+                      <svg
+                        className="w-full h-full"
+                        viewBox="0 0 300 100"
+                        preserveAspectRatio="none"
+                      >
+                        <polyline
+                          points={lineChartData.data
+                            .map((value, index) => {
+                              const x =
+                                (index / (lineChartData.data.length - 1)) * 300;
+                              const y =
+                                100 -
+                                ((value - Math.min(...lineChartData.data)) /
+                                  (Math.max(...lineChartData.data) -
+                                    Math.min(...lineChartData.data))) *
+                                  80;
+                              return `${x},${y}`;
+                            })
+                            .join(" ")}
+                          fill="none"
+                          stroke="#3b82f6"
+                          strokeWidth="2"
+                        />
+                        {lineChartData.data.map((value, index) => {
+                          const x =
+                            (index / (lineChartData.data.length - 1)) * 300;
+                          const y =
+                            100 -
+                            ((value - Math.min(...lineChartData.data)) /
+                              (Math.max(...lineChartData.data) -
+                                Math.min(...lineChartData.data))) *
+                              80;
+                          return (
+                            <circle
+                              key={index}
+                              cx={x}
+                              cy={y}
+                              r="3"
+                              fill="#3b82f6"
+                            />
+                          );
+                        })}
+                      </svg>
+                      <div className="flex justify-between mt-2">
+                        {lineChartData.labels.map((label, index) => (
+                          <span key={index} className="text-xs">
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Distribuição de Renda */}
+                <div className="h-[200px] flex items-center justify-center">
+                  <div className="w-full">
+                    <h3 className="text-sm font-medium mb-2">
+                      Distribuição de Renda
+                    </h3>
+                    <div className="flex items-end h-[150px] gap-2">
+                      {(() => {
+                        const incomeData = economic?.incomeDistribution || [
+                          10, 20, 30, 25, 15,
+                        ];
+                        const labels = [
+                          "Classe E",
+                          "Classe D",
+                          "Classe C",
+                          "Classe B",
+                          "Classe A",
+                        ];
+                        return incomeData.map((value, index) => (
+                          <div
                             key={index}
-                            cx={x}
-                            cy={y}
-                            r="3"
-                            fill="#3b82f6"
-                          />
-                        );
-                      })}
-                    </svg>
-                    <div className="flex justify-between mt-2">
-                      {lineChartData.labels.map((label, index) => (
-                        <span key={index} className="text-xs">
-                          {label}
-                        </span>
-                      ))}
+                            className="flex flex-col items-center flex-1"
+                          >
+                            <div
+                              className="w-full bg-green-500 rounded-t"
+                              style={{
+                                height: `${(value / Math.max(...incomeData)) * 120}px`,
+                              }}
+                            ></div>
+                            <span className="text-xs mt-1">
+                              {labels[index]}
+                            </span>
+                            <span className="text-xs font-medium">
+                              {value}%
+                            </span>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Setores Econômicos */}
+                <div className="h-[200px] flex items-center justify-center">
+                  <div className="w-full">
+                    <h3 className="text-sm font-medium mb-2">
+                      Setores Econômicos
+                    </h3>
+                    <div className="flex items-end h-[150px] gap-2">
+                      {(() => {
+                        const sectorsData = economic?.sectors || [
+                          30, 25, 20, 15, 10,
+                        ];
+                        const labels = [
+                          "Serviços",
+                          "Comércio",
+                          "Indústria",
+                          "Tecnologia",
+                          "Outros",
+                        ];
+                        const colors = [
+                          "#3b82f6",
+                          "#10b981",
+                          "#f59e0b",
+                          "#8b5cf6",
+                          "#ec4899",
+                        ];
+                        return sectorsData.map((value, index) => (
+                          <div
+                            key={index}
+                            className="flex flex-col items-center flex-1"
+                          >
+                            <div
+                              className="w-full rounded-t"
+                              style={{
+                                height: `${(value / Math.max(...sectorsData)) * 120}px`,
+                                backgroundColor: colors[index % colors.length],
+                              }}
+                            ></div>
+                            <span className="text-xs mt-1">
+                              {labels[index]}
+                            </span>
+                            <span className="text-xs font-medium">
+                              {value}%
+                            </span>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Indicadores Econômicos */}
+                <div className="h-[200px] p-4 border rounded-md bg-slate-50">
+                  <h3 className="text-sm font-medium mb-4">
+                    Indicadores Econômicos
+                  </h3>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span>PIB per Capita</span>
+                        <span className="font-medium">R$ 42.500</span>
+                      </div>
+                      <div className="h-2 bg-gray-200 rounded-full">
+                        <div
+                          className="h-2 bg-green-500 rounded-full"
+                          style={{ width: "65%" }}
+                        ></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span>Taxa de Desemprego</span>
+                        <span className="font-medium">7.2%</span>
+                      </div>
+                      <div className="h-2 bg-gray-200 rounded-full">
+                        <div
+                          className="h-2 bg-yellow-500 rounded-full"
+                          style={{ width: "7.2%" }}
+                        ></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span>Crescimento Econômico</span>
+                        <span className="font-medium">2.8%</span>
+                      </div>
+                      <div className="h-2 bg-gray-200 rounded-full">
+                        <div
+                          className="h-2 bg-green-500 rounded-full"
+                          style={{ width: "28%" }}
+                        ></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span>Índice de Gini</span>
+                        <span className="font-medium">0.52</span>
+                      </div>
+                      <div className="h-2 bg-gray-200 rounded-full">
+                        <div
+                          className="h-2 bg-orange-500 rounded-full"
+                          style={{ width: "52%" }}
+                        ></div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </TabsContent>
 
-            <TabsContent value="consumption" className="mt-0">
+            <TabsContent value="consumption" className="mt-0 relative">
               <div className="h-[200px] flex items-center justify-center">
                 <div className="w-full">
                   <h3 className="text-sm font-medium mb-2">
@@ -645,30 +839,236 @@ const ChartSection: React.FC<ChartSectionProps> = ({
               </div>
             </TabsContent>
 
-            <TabsContent value="violence" className="mt-0">
-              <div className="h-[200px] flex items-center justify-center">
-                <div className="w-full">
-                  <h3 className="text-sm font-medium mb-2">
-                    Índice de Criminalidade
-                  </h3>
-                  <div className="flex items-end h-[150px] gap-2">
-                    {violenceChartData.data.map((value, index) => (
-                      <div
-                        key={index}
-                        className="flex flex-col items-center flex-1"
-                      >
+            <TabsContent value="violence" className="mt-0 relative">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Índice de Criminalidade */}
+                <div className="h-[200px] flex items-center justify-center">
+                  <div className="w-full">
+                    <h3 className="text-sm font-medium mb-2">
+                      Índice de Criminalidade
+                    </h3>
+                    <div className="flex items-end h-[150px] gap-2">
+                      {violenceChartData.data.map((value, index) => (
                         <div
-                          className="w-full bg-red-500 rounded-t"
-                          style={{
-                            height: `${(value / Math.max(...violenceChartData.data)) * 120}px`,
-                          }}
-                        ></div>
-                        <span className="text-xs mt-1">
-                          {violenceChartData.labels[index]}
-                        </span>
-                        <span className="text-xs font-medium">{value}%</span>
+                          key={index}
+                          className="flex flex-col items-center flex-1"
+                        >
+                          <div
+                            className="w-full bg-red-500 rounded-t"
+                            style={{
+                              height: `${(value / Math.max(...violenceChartData.data)) * 120}px`,
+                            }}
+                          ></div>
+                          <span className="text-xs mt-1">
+                            {violenceChartData.labels[index]}
+                          </span>
+                          <span className="text-xs font-medium">{value}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Incidentes Mensais */}
+                <div className="h-[200px] flex items-center justify-center">
+                  <div className="w-full">
+                    <h3 className="text-sm font-medium mb-2">
+                      Incidentes Mensais
+                    </h3>
+                    <div className="relative h-[150px] w-full">
+                      <svg
+                        className="w-full h-full"
+                        viewBox="0 0 300 100"
+                        preserveAspectRatio="none"
+                      >
+                        {(() => {
+                          const monthlyIncidents =
+                            violence?.monthlyIncidents || [
+                              45, 40, 38, 42, 50, 48,
+                            ];
+                          const labels = [
+                            "Jan",
+                            "Fev",
+                            "Mar",
+                            "Abr",
+                            "Mai",
+                            "Jun",
+                          ];
+
+                          // Draw the line
+                          const points = monthlyIncidents
+                            .map((value, index) => {
+                              const x =
+                                (index / (monthlyIncidents.length - 1)) * 300;
+                              const y =
+                                100 -
+                                ((value - Math.min(...monthlyIncidents)) /
+                                  (Math.max(...monthlyIncidents) -
+                                    Math.min(...monthlyIncidents))) *
+                                  80;
+                              return `${x},${y}`;
+                            })
+                            .join(" ");
+
+                          return (
+                            <>
+                              <polyline
+                                points={points}
+                                fill="none"
+                                stroke="#ef4444"
+                                strokeWidth="2"
+                              />
+                              {monthlyIncidents.map((value, index) => {
+                                const x =
+                                  (index / (monthlyIncidents.length - 1)) * 300;
+                                const y =
+                                  100 -
+                                  ((value - Math.min(...monthlyIncidents)) /
+                                    (Math.max(...monthlyIncidents) -
+                                      Math.min(...monthlyIncidents))) *
+                                    80;
+                                return (
+                                  <circle
+                                    key={index}
+                                    cx={x}
+                                    cy={y}
+                                    r="3"
+                                    fill="#ef4444"
+                                  />
+                                );
+                              })}
+                            </>
+                          );
+                        })()}
+                      </svg>
+                      <div className="flex justify-between mt-2">
+                        {["Jan", "Fev", "Mar", "Abr", "Mai", "Jun"].map(
+                          (label, index) => (
+                            <span key={index} className="text-xs">
+                              {label}
+                            </span>
+                          ),
+                        )}
                       </div>
-                    ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Índice de Segurança */}
+                <div className="h-[200px] flex items-center justify-center">
+                  <div className="w-full">
+                    <h3 className="text-sm font-medium mb-2">
+                      Índice de Segurança
+                    </h3>
+                    <div className="flex flex-col items-center justify-center h-[150px]">
+                      <div className="relative w-[150px] h-[150px]">
+                        <svg viewBox="0 0 100 100" className="w-full h-full">
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="45"
+                            fill="none"
+                            stroke="#e5e7eb"
+                            strokeWidth="10"
+                          />
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="45"
+                            fill="none"
+                            stroke={
+                              violence?.safetyIndex && violence.safetyIndex > 70
+                                ? "#10b981"
+                                : violence?.safetyIndex &&
+                                    violence.safetyIndex > 40
+                                  ? "#f59e0b"
+                                  : "#ef4444"
+                            }
+                            strokeWidth="10"
+                            strokeDasharray="282.7"
+                            strokeDashoffset={
+                              282.7 * (1 - (violence?.safetyIndex || 65) / 100)
+                            }
+                            transform="rotate(-90 50 50)"
+                          />
+                          <text
+                            x="50"
+                            y="50"
+                            textAnchor="middle"
+                            dominantBaseline="middle"
+                            fontSize="20"
+                            fontWeight="bold"
+                            fill={
+                              violence?.safetyIndex && violence.safetyIndex > 70
+                                ? "#10b981"
+                                : violence?.safetyIndex &&
+                                    violence.safetyIndex > 40
+                                  ? "#f59e0b"
+                                  : "#ef4444"
+                            }
+                          >
+                            {violence?.safetyIndex || 65}%
+                          </text>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Indicadores de Segurança */}
+                <div className="h-[200px] p-4 border rounded-md bg-slate-50">
+                  <h3 className="text-sm font-medium mb-4">
+                    Indicadores de Segurança
+                  </h3>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span>Crimes por 100k habitantes</span>
+                        <span className="font-medium">42.3</span>
+                      </div>
+                      <div className="h-2 bg-gray-200 rounded-full">
+                        <div
+                          className="h-2 bg-red-500 rounded-full"
+                          style={{ width: "42.3%" }}
+                        ></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span>Presença Policial</span>
+                        <span className="font-medium">68%</span>
+                      </div>
+                      <div className="h-2 bg-gray-200 rounded-full">
+                        <div
+                          className="h-2 bg-blue-500 rounded-full"
+                          style={{ width: "68%" }}
+                        ></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span>Iluminação Pública</span>
+                        <span className="font-medium">76%</span>
+                      </div>
+                      <div className="h-2 bg-gray-200 rounded-full">
+                        <div
+                          className="h-2 bg-yellow-500 rounded-full"
+                          style={{ width: "76%" }}
+                        ></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span>Percepção de Segurança</span>
+                        <span className="font-medium">58%</span>
+                      </div>
+                      <div className="h-2 bg-gray-200 rounded-full">
+                        <div
+                          className="h-2 bg-orange-500 rounded-full"
+                          style={{ width: "58%" }}
+                        ></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
