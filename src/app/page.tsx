@@ -78,7 +78,7 @@ export default function Dashboard() {
           </div>
 
           {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="w-full">
             <KpiCards
               selectedRegion={selectedRegion}
               selectedFilters={selectedFilters}
@@ -86,7 +86,7 @@ export default function Dashboard() {
           </div>
 
           {/* Charts Section */}
-          <div className="bg-white dark:bg-gray-900 rounded-lg border dark:border-gray-800 shadow-sm p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg border dark:border-gray-800 shadow-sm">
             <ChartSection
               selectedRegion={selectedRegion}
               selectedFilters={selectedFilters}
