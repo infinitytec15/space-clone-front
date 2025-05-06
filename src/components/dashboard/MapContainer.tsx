@@ -182,6 +182,7 @@ const MapContainer = ({
   const [mapLoaded, setMapLoaded] = useState(false);
   const [activeDrawing, setActiveDrawing] = useState<any>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
+  const [customMarkers, setCustomMarkers] = useState<mapboxgl.Marker[]>([]);
 
   // Category colors for markers
   const categoryColors: Record<string, string> = {
@@ -332,18 +333,11 @@ const MapContainer = ({
       companies.forEach((company) => {
         // Create marker element with enhanced styling
         const el = document.createElement("div");
-        el.className = `w-6 h-6 rounded-full ${categoryColors[company.category] || "bg-gray-500"} ring-2 ring-white shadow-md flex items-center justify-center cursor-pointer transition-transform hover:scale-110`;
+        el.className = `w-6 h-6 rounded-full ${categoryColors[company.category] || "bg-gray-500"} ring-2 ring-white shadow-md flex items-center justify-center cursor-pointer`;
 
-        // Add animation effect on hover
-        el.style.transition = "all 0.2s ease-in-out";
-        el.addEventListener("mouseover", () => {
-          el.style.transform = "scale(1.2)";
-          el.style.zIndex = "999";
-        });
-        el.addEventListener("mouseout", () => {
-          el.style.transform = "scale(1)";
-          el.style.zIndex = "auto";
-        });
+        // Set fixed position to prevent movement on hover
+        el.style.position = "relative";
+        el.style.transform = "translate(-50%, -50%)";
 
         // Add icon based on category
         const iconElement = document.createElement("span");
@@ -462,6 +456,14 @@ const MapContainer = ({
       default:
         break;
     }
+
+    // Adiciona um evento de clique no mapa para adicionar pontos quando estiver no modo pointer
+    if (tool === "pointer" && map.current) {
+      map.current.on("click", addPointOnClick);
+    } else if (map.current) {
+      // Remove o evento de clique quando não estiver no modo pointer
+      map.current.off("click", addPointOnClick);
+    }
   };
 
   const handleAreaSelect = (area: any) => {
@@ -472,6 +474,71 @@ const MapContainer = ({
   const handleRegionSelect = (region: string) => {
     // Dispatch custom event instead of calling prop function
     window.dispatchEvent(new CustomEvent("regionselect", { detail: region }));
+  };
+
+  // Função para adicionar pontos ao clicar no mapa
+  const addPointOnClick = (e: mapboxgl.MapMouseEvent) => {
+    if (!map.current) return;
+
+    // Gera uma categoria aleatória para o ponto
+    const categories = [
+      "varejo",
+      "alimentacao",
+      "saude",
+      "educacao",
+      "tecnologia",
+    ];
+    const randomCategory =
+      categories[Math.floor(Math.random() * categories.length)];
+
+    // Cria o elemento do marcador
+    const el = document.createElement("div");
+    el.className = `w-6 h-6 rounded-full ${categoryColors[randomCategory] || "bg-gray-500"} ring-2 ring-white shadow-md flex items-center justify-center cursor-pointer`;
+    el.style.position = "relative";
+    el.style.transform = "translate(-50%, -50%)";
+
+    // Adiciona a letra inicial da categoria
+    const iconElement = document.createElement("span");
+    iconElement.className = "text-white text-xs font-bold";
+    iconElement.textContent = randomCategory.charAt(0).toUpperCase();
+    el.appendChild(iconElement);
+
+    // Cria o popup
+    const popup = new mapboxgl.Popup({
+      offset: 25,
+      closeButton: true,
+      closeOnClick: true,
+      maxWidth: "300px",
+    }).setHTML(
+      `<div class="p-3 bg-white rounded-lg shadow-md">
+        <h3 class="font-bold text-sm mb-1">Novo Ponto</h3>
+        <div class="flex items-center mb-1">
+          <span class="inline-block w-2 h-2 rounded-full ${categoryColors[randomCategory] || "bg-gray-500"} mr-1"></span>
+          <p class="text-xs font-medium">${randomCategory.charAt(0).toUpperCase() + randomCategory.slice(1)}</p>
+        </div>
+        <p class="text-xs text-gray-600 mb-1">Ponto adicionado pelo usuário</p>
+        <p class="text-xs text-gray-600 mb-1">Coordenadas: ${e.lngLat.lng.toFixed(4)}, ${e.lngLat.lat.toFixed(4)}</p>
+      </div>`,
+    );
+
+    // Cria o marcador e o adiciona ao mapa
+    const newMarker = new mapboxgl.Marker(el)
+      .setLngLat([e.lngLat.lng, e.lngLat.lat])
+      .setPopup(popup)
+      .addTo(map.current);
+
+    // Adiciona o marcador à lista de marcadores personalizados
+    setCustomMarkers((prev) => [...prev, newMarker]);
+
+    // Adiciona evento de clique ao marcador
+    el.addEventListener("click", () => {
+      // Fecha outros popups abertos
+      const openPopups = document.querySelectorAll(".mapboxgl-popup");
+      openPopups.forEach((popup) => popup.remove());
+
+      // Abre este popup
+      newMarker.togglePopup();
+    });
   };
 
   return (
