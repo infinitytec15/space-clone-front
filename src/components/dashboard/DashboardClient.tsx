@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function DashboardClient() {
+  const [filterPanelOpen, setFilterPanelOpen] = useState(true);
+
   // Event listeners for FilterPanel and SidePanel events
   useEffect(() => {
     const handleCloseFilterPanel = () => setFilterPanelOpen(false);
@@ -28,7 +30,6 @@ export default function DashboardClient() {
       window.removeEventListener("closesidebar", handleCloseSidebar);
     };
   }, [filterPanelOpen]);
-  const [filterPanelOpen, setFilterPanelOpen] = useState(true);
   const [selectedRegion, setSelectedRegion] = useState<string>("Brasil");
   const [selectedFilters, setSelectedFilters] = useState({
     city: "São Paulo",

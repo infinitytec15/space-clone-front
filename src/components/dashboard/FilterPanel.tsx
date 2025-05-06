@@ -20,7 +20,6 @@ import {
 interface FilterPanelProps {
   onFilterChange?: (filters: FilterState) => void;
   isCollapsed?: boolean;
-  onToggleCollapse?: () => void;
 }
 
 interface FilterState {
@@ -37,7 +36,6 @@ interface FilterState {
 const FilterPanel = ({
   onFilterChange = () => {},
   isCollapsed = false,
-  onToggleCollapse = () => {},
 }: FilterPanelProps) => {
   const [localCollapsed, setLocalCollapsed] = useState(isCollapsed);
   const [filters, setFilters] = useState<FilterState>({
@@ -113,7 +111,7 @@ const FilterPanel = ({
   const toggleCollapse = () => {
     const newState = !localCollapsed;
     setLocalCollapsed(newState);
-    onToggleCollapse();
+    window.dispatchEvent(new CustomEvent("togglefilterpanel"));
   };
 
   const handleCidadeChange = (cidade: string) => {
