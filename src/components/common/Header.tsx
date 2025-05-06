@@ -2,11 +2,29 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { MapPin, BarChart3, TrendingUp, Brain, Settings } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  MapPin,
+  BarChart3,
+  TrendingUp,
+  Brain,
+  Settings,
+  LogOut,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const Header = () => {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    // Remover dados de autenticação do localStorage
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("user");
+
+    // Redirecionar para a página de login
+    router.push("/login");
+  };
 
   const navItems = [
     {
@@ -62,11 +80,11 @@ const Header = () => {
   ];
 
   return (
-    <header className="bg-white border-b sticky top-0 z-50">
+    <header className="bg-white border-b sticky top-0 z-50 shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
-            <Link href="/" className="flex items-center">
+            <Link href="/dashboard" className="flex items-center">
               <div className="bg-blue-600 text-white font-bold rounded-md p-1.5 mr-2">
                 <span>SD</span>
               </div>
@@ -74,7 +92,7 @@ const Header = () => {
             </Link>
           </div>
 
-          <nav className="hidden md:flex space-x-1">
+          <nav className="hidden md:flex space-x-1 flex-1 justify-center">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -97,6 +115,19 @@ const Header = () => {
               );
             })}
           </nav>
+
+          {/* Logout Button */}
+          <div className="hidden md:block">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Sair</span>
+            </Button>
+          </div>
 
           <div className="md:hidden flex items-center">
             <button
