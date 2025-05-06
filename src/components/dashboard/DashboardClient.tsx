@@ -6,6 +6,7 @@ import FilterPanel from "@/components/dashboard/FilterPanel";
 import KpiCards from "@/components/dashboard/KpiCards";
 import ChartSection from "@/components/dashboard/ChartSection";
 import SidePanel from "@/components/dashboard/SidePanel";
+import ChatComponent from "@/components/dashboard/ChatComponent";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -188,6 +189,9 @@ export default function DashboardClient() {
 
         {/* Company Details Sidebar */}
         <SidePanel />
+
+        {/* AI Chat Component */}
+        <ChatComponent />
       </main>
     </div>
   );
