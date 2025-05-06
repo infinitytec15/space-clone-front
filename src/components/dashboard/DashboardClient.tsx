@@ -12,24 +12,6 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function DashboardClient() {
-  const [filterPanelOpen, setFilterPanelOpen] = useState(true);
-
-  // Event listeners for FilterPanel and SidePanel events
-  useEffect(() => {
-    const handleCloseFilterPanel = () => setFilterPanelOpen(false);
-    const handleToggleFilterPanel = () => setFilterPanelOpen(!filterPanelOpen);
-    const handleCloseSidebar = () => setSidebarOpen(false);
-
-    window.addEventListener("closefilterpanel", handleCloseFilterPanel);
-    window.addEventListener("togglefilterpanel", handleToggleFilterPanel);
-    window.addEventListener("closesidebar", handleCloseSidebar);
-
-    return () => {
-      window.removeEventListener("closefilterpanel", handleCloseFilterPanel);
-      window.removeEventListener("togglefilterpanel", handleToggleFilterPanel);
-      window.removeEventListener("closesidebar", handleCloseSidebar);
-    };
-  }, [filterPanelOpen]);
   const [selectedRegion, setSelectedRegion] = useState<string>("Brasil");
   const [selectedFilters, setSelectedFilters] = useState({
     city: "São Paulo",
@@ -42,33 +24,75 @@ export default function DashboardClient() {
   });
   const [selectedCompany, setSelectedCompany] = useState<any>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [filterPanelOpen, setFilterPanelOpen] = useState(true);
   const { toast } = useToast();
 
-  // Função para lidar com a seleção de região no mapa
-  const handleRegionSelect = (region: string) => {
-    setSelectedRegion(region);
-    toast({
-      title: "Região selecionada",
-      description: `Dados atualizados para ${region}`,
-      variant: "default",
-    });
-  };
+  // Event listeners for FilterPanel and SidePanel events
+  useEffect(() => {
+    const handleCloseFilterPanel = () => setFilterPanelOpen(false);
+    const handleToggleFilterPanel = () => setFilterPanelOpen(!filterPanelOpen);
+    const handleCloseSidebar = () => setSidebarOpen(false);
+    const handleFilterChange = (event: CustomEvent) => {
+      if (event.detail) {
+        setSelectedFilters(event.detail);
+        toast({
+          title: "Filtros aplicados",
+          description: "Os dados foram atualizados com os novos filtros",
+          variant: "default",
+        });
+      }
+    };
+    const handleMarkerSelect = (event: CustomEvent) => {
+      if (event.detail) {
+        setSelectedCompany(event.detail);
+        setSidebarOpen(true);
+      }
+    };
+    const handleRegionSelect = (event: CustomEvent) => {
+      if (event.detail) {
+        setSelectedRegion(event.detail);
+        toast({
+          title: "Região selecionada",
+          description: `Dados atualizados para ${event.detail}`,
+          variant: "default",
+        });
+      }
+    };
 
-  // Função para lidar com a aplicação de filtros
-  const handleFilterChange = (filters: any) => {
-    setSelectedFilters(filters);
-    toast({
-      title: "Filtros aplicados",
-      description: "Os dados foram atualizados com os novos filtros",
-      variant: "default",
-    });
-  };
+    window.addEventListener("closefilterpanel", handleCloseFilterPanel);
+    window.addEventListener("togglefilterpanel", handleToggleFilterPanel);
+    window.addEventListener("closesidebar", handleCloseSidebar);
+    window.addEventListener(
+      "filterchange",
+      handleFilterChange as EventListener,
+    );
+    window.addEventListener(
+      "markerselect",
+      handleMarkerSelect as EventListener,
+    );
+    window.addEventListener(
+      "regionselect",
+      handleRegionSelect as EventListener,
+    );
 
-  // Função para lidar com a seleção de empresa no mapa
-  const handleMarkerSelect = (company: any) => {
-    setSelectedCompany(company);
-    setSidebarOpen(true);
-  };
+    return () => {
+      window.removeEventListener("closefilterpanel", handleCloseFilterPanel);
+      window.removeEventListener("togglefilterpanel", handleToggleFilterPanel);
+      window.removeEventListener("closesidebar", handleCloseSidebar);
+      window.removeEventListener(
+        "filterchange",
+        handleFilterChange as EventListener,
+      );
+      window.removeEventListener(
+        "markerselect",
+        handleMarkerSelect as EventListener,
+      );
+      window.removeEventListener(
+        "regionselect",
+        handleRegionSelect as EventListener,
+      );
+    };
+  }, [filterPanelOpen, toast]);
 
   // Funções para o DashboardHeader
   const handleExport = () => {
@@ -115,7 +139,11 @@ export default function DashboardClient() {
       {/* Dashboard Header */}
       <DashboardHeader
         selectedRegion={selectedRegion}
-        onRegionChange={handleRegionSelect}
+        onRegionChange={(region) => {
+          window.dispatchEvent(
+            new CustomEvent("regionselect", { detail: region }),
+          );
+        }}
         onExport={handleExport}
         onShare={handleShare}
       />
@@ -133,7 +161,7 @@ export default function DashboardClient() {
           <div
             className={`${filterPanelOpen ? "h-full w-80 max-w-full bg-white dark:bg-gray-900" : ""}`}
           >
-            <FilterPanel onFilterChange={handleFilterChange} />
+            <FilterPanel />
           </div>
         </aside>
 
@@ -141,13 +169,7 @@ export default function DashboardClient() {
         <div className="flex-1 p-2 md:p-4 space-y-4 md:space-y-6 overflow-auto">
           {/* Map Container */}
           <div className="h-[400px] sm:h-[450px] md:h-[500px] lg:h-[600px] bg-white dark:bg-gray-900 rounded-lg border border-blue-200 dark:border-blue-900 shadow-md overflow-hidden">
-            <MapContainer
-              selectedFilters={selectedFilters}
-              onMarkerSelect={(company) => {
-                setSelectedCompany(company);
-                setSidebarOpen(true);
-              }}
-            />
+            <MapContainer selectedFilters={selectedFilters} />
           </div>
 
           {/* KPI Cards */}

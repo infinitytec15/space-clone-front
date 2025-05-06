@@ -155,8 +155,6 @@ const sampleCompanies: CompanyData[] = [
 ];
 
 const MapContainer = ({
-  onAreaSelect = () => {},
-  onMarkerSelect = () => {},
   initialCenter = [-47.9292, -15.7801], // Brasília as default
   initialZoom = 12,
   markers = [],
@@ -311,7 +309,10 @@ const MapContainer = ({
               detailsBtn.addEventListener("click", (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                onMarkerSelect(company);
+                // Dispatch custom event instead of calling prop function
+                window.dispatchEvent(
+                  new CustomEvent("markerselect", { detail: company }),
+                );
               });
             }
           }, 10);
@@ -327,7 +328,7 @@ const MapContainer = ({
         map.current = null;
       }
     };
-  }, [initialCenter, initialZoom, markers, categoryColors]);
+  }, [initialCenter, initialZoom, markers, categoryColors, companies]);
 
   const handleToolSelect = (tool: "pointer" | "circle" | "polygon") => {
     setSelectedTool(tool);
@@ -341,8 +342,14 @@ const MapContainer = ({
     // using something like MapboxDraw
   };
 
-  const handleMarkerClick = (marker: any) => {
-    onMarkerSelect(marker);
+  const handleAreaSelect = (area: any) => {
+    // Dispatch custom event instead of calling prop function
+    window.dispatchEvent(new CustomEvent("areaselect", { detail: area }));
+  };
+
+  const handleRegionSelect = (region: string) => {
+    // Dispatch custom event instead of calling prop function
+    window.dispatchEvent(new CustomEvent("regionselect", { detail: region }));
   };
 
   return (

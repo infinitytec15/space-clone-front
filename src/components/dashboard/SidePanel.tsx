@@ -78,6 +78,11 @@ const SidePanel = ({ company, isOpen }: SidePanelProps) => {
     return `${count} (Grande)`;
   };
 
+  // Handle close sidebar using custom event
+  const handleCloseSidebar = () => {
+    window.dispatchEvent(new CustomEvent("closesidebar"));
+  };
+
   return (
     <div className="fixed inset-y-0 right-0 w-full sm:w-96 bg-white dark:bg-gray-900 border-l border-blue-200 dark:border-blue-900 shadow-lg z-50 overflow-y-auto">
       <div className="p-4 border-b border-blue-100 dark:border-blue-800 bg-gradient-to-r from-blue-50 to-white dark:from-blue-950 dark:to-gray-900 flex justify-between items-center">
@@ -88,7 +93,7 @@ const SidePanel = ({ company, isOpen }: SidePanelProps) => {
           variant="ghost"
           size="icon"
           className="hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300"
-          onClick={() => window.dispatchEvent(new CustomEvent("closesidebar"))}
+          onClick={handleCloseSidebar}
         >
           <X className="h-5 w-5" />
           <span className="sr-only">Fechar</span>

@@ -11,32 +11,52 @@ const Header = () => {
   const navItems = [
     {
       name: "Dashboard",
-      href: "/",
+      href: "/dashboard",
       icon: <MapPin className="h-5 w-5" />,
     },
     {
       name: "Cidades",
-      href: "/cidades-sociodemografia",
+      href: "/dashboard/cidades",
       icon: <BarChart3 className="h-5 w-5" />,
     },
     {
       name: "Consumo",
-      href: "/potencial-consumo",
+      href: "/dashboard/consumo",
       icon: <TrendingUp className="h-5 w-5" />,
     },
     {
-      name: "Análises",
-      href: "/analises-espaciais",
+      name: "Analytics",
+      href: "/dashboard/analytics",
       icon: <MapPin className="h-5 w-5" />,
     },
     {
+      name: "Empresas",
+      href: "/dashboard/empresas",
+      icon: <MapPin className="h-5 w-5" />,
+    },
+    {
+      name: "Espaços",
+      href: "/dashboard/espacos",
+      icon: <Settings className="h-5 w-5" />,
+    },
+    {
       name: "Space AI",
-      href: "/space-ai",
+      href: "/dashboard/ai",
       icon: <Brain className="h-5 w-5" />,
     },
     {
-      name: "Gerenciador",
-      href: "/space-manager",
+      name: "Mobilidade",
+      href: "/dashboard/mobilidade",
+      icon: <MapPin className="h-5 w-5" />,
+    },
+    {
+      name: "Educação",
+      href: "/dashboard/educacao",
+      icon: <MapPin className="h-5 w-5" />,
+    },
+    {
+      name: "Minha Conta",
+      href: "/dashboard/conta",
       icon: <Settings className="h-5 w-5" />,
     },
   ];
