@@ -37,10 +37,9 @@ interface CompanyData {
 interface SidePanelProps {
   company: CompanyData | null;
   isOpen: boolean;
-  setSidebarOpen: (open: boolean) => void;
 }
 
-const SidePanel = ({ company, isOpen, setSidebarOpen }: SidePanelProps) => {
+const SidePanel = ({ company, isOpen }: SidePanelProps) => {
   if (!isOpen || !company) return null;
 
   // Helper function to get category color
@@ -89,7 +88,7 @@ const SidePanel = ({ company, isOpen, setSidebarOpen }: SidePanelProps) => {
           variant="ghost"
           size="icon"
           className="hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300"
-          onClick={() => setSidebarOpen(false)}
+          onClick={() => window.dispatchEvent(new CustomEvent("closesidebar"))}
         >
           <X className="h-5 w-5" />
           <span className="sr-only">Fechar</span>

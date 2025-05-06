@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MapContainer from "@/components/dashboard/MapContainer";
 import FilterPanel from "@/components/dashboard/FilterPanel";
 import KpiCards from "@/components/dashboard/KpiCards";
@@ -12,6 +12,22 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function DashboardClient() {
+  // Event listeners for FilterPanel and SidePanel events
+  useEffect(() => {
+    const handleCloseFilterPanel = () => setFilterPanelOpen(false);
+    const handleToggleFilterPanel = () => setFilterPanelOpen(!filterPanelOpen);
+    const handleCloseSidebar = () => setSidebarOpen(false);
+
+    window.addEventListener("closefilterpanel", handleCloseFilterPanel);
+    window.addEventListener("togglefilterpanel", handleToggleFilterPanel);
+    window.addEventListener("closesidebar", handleCloseSidebar);
+
+    return () => {
+      window.removeEventListener("closefilterpanel", handleCloseFilterPanel);
+      window.removeEventListener("togglefilterpanel", handleToggleFilterPanel);
+      window.removeEventListener("closesidebar", handleCloseSidebar);
+    };
+  }, [filterPanelOpen]);
   const [filterPanelOpen, setFilterPanelOpen] = useState(true);
   const [selectedRegion, setSelectedRegion] = useState<string>("Brasil");
   const [selectedFilters, setSelectedFilters] = useState({
@@ -116,10 +132,7 @@ export default function DashboardClient() {
           <div
             className={`${filterPanelOpen ? "h-full w-80 max-w-full bg-white dark:bg-gray-900" : ""}`}
           >
-            <FilterPanel
-              onFilterChange={handleFilterChange}
-              onClose={() => setFilterPanelOpen(false)}
-            />
+            <FilterPanel onFilterChange={handleFilterChange} />
           </div>
         </aside>
 
@@ -154,11 +167,7 @@ export default function DashboardClient() {
         </div>
 
         {/* Company Details Sidebar */}
-        <SidePanel
-          company={selectedCompany}
-          isOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-        />
+        <SidePanel company={selectedCompany} isOpen={sidebarOpen} />
       </main>
     </div>
   );
