@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import {
   X,
   Phone,
@@ -17,8 +17,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useDashboardStore } from "@/lib/zustand/dashboardStore";
 
-interface CompanyData {
+export interface CompanyData {
   id: string;
   name: string;
   position: [number, number];
@@ -34,13 +35,11 @@ interface CompanyData {
   };
 }
 
-interface SidePanelProps {
-  company: CompanyData | null;
-  isOpen: boolean;
-}
+const SidePanel = () => {
+  const { isSidePanelOpen, selectedCompany, closeSidePanel } =
+    useDashboardStore();
 
-const SidePanel = ({ company, isOpen }: SidePanelProps) => {
-  if (!isOpen || !company) return null;
+  if (!isSidePanelOpen || !selectedCompany) return null;
 
   // Helper function to get category color
   const getCategoryColor = (category: string) => {
@@ -78,11 +77,6 @@ const SidePanel = ({ company, isOpen }: SidePanelProps) => {
     return `${count} (Grande)`;
   };
 
-  // Handle close sidebar using custom event
-  const handleCloseSidebar = () => {
-    window.dispatchEvent(new CustomEvent("closesidebar"));
-  };
-
   return (
     <div className="fixed inset-y-0 right-0 w-full sm:w-96 bg-white dark:bg-gray-900 border-l border-blue-200 dark:border-blue-900 shadow-lg z-50 overflow-y-auto">
       <div className="p-4 border-b border-blue-100 dark:border-blue-800 bg-gradient-to-r from-blue-50 to-white dark:from-blue-950 dark:to-gray-900 flex justify-between items-center">
@@ -93,7 +87,7 @@ const SidePanel = ({ company, isOpen }: SidePanelProps) => {
           variant="ghost"
           size="icon"
           className="hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300"
-          onClick={handleCloseSidebar}
+          onClick={closeSidePanel}
         >
           <X className="h-5 w-5" />
           <span className="sr-only">Fechar</span>
@@ -104,11 +98,13 @@ const SidePanel = ({ company, isOpen }: SidePanelProps) => {
         {/* Company Header */}
         <div className="space-y-2 bg-gradient-to-r from-blue-50 to-white dark:from-blue-950 dark:to-gray-900 p-4 rounded-lg">
           <h3 className="text-xl font-bold text-blue-900 dark:text-blue-100">
-            {company.name}
+            {selectedCompany.name}
           </h3>
-          <Badge className={`${getCategoryColor(company.category)} shadow-sm`}>
-            {company.category.charAt(0).toUpperCase() +
-              company.category.slice(1)}
+          <Badge
+            className={`${getCategoryColor(selectedCompany.category)} shadow-sm`}
+          >
+            {selectedCompany.category.charAt(0).toUpperCase() +
+              selectedCompany.category.slice(1)}
           </Badge>
         </div>
 
@@ -120,7 +116,7 @@ const SidePanel = ({ company, isOpen }: SidePanelProps) => {
                 <FileText className="h-4 w-4" /> CNAE
               </p>
               <p className="font-medium text-blue-900 dark:text-blue-100">
-                {company.cnae}
+                {selectedCompany.cnae}
               </p>
             </div>
             <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg">
@@ -128,7 +124,7 @@ const SidePanel = ({ company, isOpen }: SidePanelProps) => {
                 <TrendingUp className="h-4 w-4" /> Faturamento
               </p>
               <p className="font-medium capitalize text-blue-900 dark:text-blue-100">
-                {formatRevenue(company.revenue)}
+                {formatRevenue(selectedCompany.revenue)}
               </p>
             </div>
           </div>
@@ -138,7 +134,7 @@ const SidePanel = ({ company, isOpen }: SidePanelProps) => {
               <Building className="h-4 w-4" /> Descrição CNAE
             </p>
             <p className="font-medium text-blue-900 dark:text-blue-100">
-              {company.cnaeDescription}
+              {selectedCompany.cnaeDescription}
             </p>
           </div>
 
@@ -147,36 +143,36 @@ const SidePanel = ({ company, isOpen }: SidePanelProps) => {
               <Users className="h-4 w-4" /> Funcionários
             </p>
             <p className="font-medium text-blue-900 dark:text-blue-100">
-              {formatEmployees(company.employees)}
+              {formatEmployees(selectedCompany.employees)}
             </p>
           </div>
 
-          {company.contact && (
+          {selectedCompany.contact && (
             <div className="space-y-2 bg-blue-50 dark:bg-blue-950 p-3 rounded-lg">
               <p className="text-sm text-blue-700 dark:text-blue-300">
                 Contato
               </p>
-              {company.contact.phone && (
+              {selectedCompany.contact.phone && (
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   <p className="text-blue-900 dark:text-blue-100">
-                    {company.contact.phone}
+                    {selectedCompany.contact.phone}
                   </p>
                 </div>
               )}
-              {company.contact.email && (
+              {selectedCompany.contact.email && (
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   <p className="text-blue-900 dark:text-blue-100">
-                    {company.contact.email}
+                    {selectedCompany.contact.email}
                   </p>
                 </div>
               )}
-              {company.contact.website && (
+              {selectedCompany.contact.website && (
                 <div className="flex items-center gap-2">
                   <Globe className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   <p className="text-blue-900 dark:text-blue-100">
-                    {company.contact.website}
+                    {selectedCompany.contact.website}
                   </p>
                 </div>
               )}

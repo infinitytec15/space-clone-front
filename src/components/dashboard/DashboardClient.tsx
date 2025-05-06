@@ -10,6 +10,8 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { useDashboardStore } from "@/lib/zustand/dashboardStore";
+import type { CompanyData } from "@/components/dashboard/SidePanel";
 
 export default function DashboardClient() {
   const [selectedRegion, setSelectedRegion] = useState<string>("Brasil");
@@ -22,16 +24,14 @@ export default function DashboardClient() {
     faturamento: "todos",
     funcionarios: "todos",
   });
-  const [selectedCompany, setSelectedCompany] = useState<any>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [filterPanelOpen, setFilterPanelOpen] = useState(true);
   const { toast } = useToast();
+  const { openSidePanel } = useDashboardStore();
 
   // Event listeners for FilterPanel and SidePanel events
   useEffect(() => {
     const handleCloseFilterPanel = () => setFilterPanelOpen(false);
     const handleToggleFilterPanel = () => setFilterPanelOpen(!filterPanelOpen);
-    const handleCloseSidebar = () => setSidebarOpen(false);
     const handleFilterChange = (event: CustomEvent) => {
       if (event.detail) {
         setSelectedFilters(event.detail);
@@ -44,8 +44,7 @@ export default function DashboardClient() {
     };
     const handleMarkerSelect = (event: CustomEvent) => {
       if (event.detail) {
-        setSelectedCompany(event.detail);
-        setSidebarOpen(true);
+        openSidePanel(event.detail as CompanyData);
       }
     };
     const handleRegionSelect = (event: CustomEvent) => {
@@ -61,7 +60,6 @@ export default function DashboardClient() {
 
     window.addEventListener("closefilterpanel", handleCloseFilterPanel);
     window.addEventListener("togglefilterpanel", handleToggleFilterPanel);
-    window.addEventListener("closesidebar", handleCloseSidebar);
     window.addEventListener(
       "filterchange",
       handleFilterChange as EventListener,
@@ -78,7 +76,6 @@ export default function DashboardClient() {
     return () => {
       window.removeEventListener("closefilterpanel", handleCloseFilterPanel);
       window.removeEventListener("togglefilterpanel", handleToggleFilterPanel);
-      window.removeEventListener("closesidebar", handleCloseSidebar);
       window.removeEventListener(
         "filterchange",
         handleFilterChange as EventListener,
@@ -92,7 +89,7 @@ export default function DashboardClient() {
         handleRegionSelect as EventListener,
       );
     };
-  }, [filterPanelOpen, toast]);
+  }, [filterPanelOpen, toast, openSidePanel]);
 
   // Funções para o DashboardHeader
   const handleExport = () => {
@@ -190,7 +187,7 @@ export default function DashboardClient() {
         </div>
 
         {/* Company Details Sidebar */}
-        <SidePanel company={selectedCompany} isOpen={sidebarOpen} />
+        <SidePanel />
       </main>
     </div>
   );
