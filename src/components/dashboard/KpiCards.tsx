@@ -49,13 +49,13 @@ const KpiCards = ({ data }: KpiCardsProps) => {
   const displayData = data || defaultData;
 
   return (
-    <div className="w-full bg-white p-6 rounded-xl">
-      <h2 className="text-xl font-bold mb-5 text-slate-800 flex items-center">
+    <div className="w-full bg-white p-4 md:p-6 rounded-xl">
+      <h2 className="text-lg md:text-xl font-bold mb-3 md:mb-5 text-slate-800 flex items-center">
         <span className="inline-block w-2 h-6 bg-blue-500 rounded-full mr-3"></span>
         Indicadores-Chave
       </h2>
-      <div className="flex flex-row gap-4 overflow-x-auto pb-2">
-        <div className="w-[240px] flex-shrink-0">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <div className="w-full">
           <KpiCard
             title="População"
             value={displayData.population.value}
@@ -64,7 +64,7 @@ const KpiCards = ({ data }: KpiCardsProps) => {
             color="bg-blue-50 border-blue-200"
           />
         </div>
-        <div className="w-[240px] flex-shrink-0">
+        <div className="w-full">
           <KpiCard
             title="Renda Média"
             value={displayData.averageIncome.value}
@@ -73,7 +73,7 @@ const KpiCards = ({ data }: KpiCardsProps) => {
             color="bg-emerald-50 border-emerald-200"
           />
         </div>
-        <div className="w-[240px] flex-shrink-0">
+        <div className="w-full">
           <KpiCard
             title="Classes Sociais"
             value={displayData.socialClasses.value}
@@ -82,7 +82,7 @@ const KpiCards = ({ data }: KpiCardsProps) => {
             color="bg-amber-50 border-amber-200"
           />
         </div>
-        <div className="w-[240px] flex-shrink-0">
+        <div className="w-full">
           <KpiCard
             title="Potencial de Consumo"
             value={displayData.consumptionPotential.value}

@@ -2,13 +2,15 @@ import { TempoInit } from "@/components/tempo-init";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
+import Header from "@/components/common/Header";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Tempo - Modern SaaS Starter",
-  description: "A modern full-stack starter template powered by Next.js",
+  title: "Space Data - Dashboard Geoespacial",
+  description:
+    "Dashboard interativo para análise de dados geoespaciais, demográficos e econômicos",
 };
 
 export default function RootLayout({
@@ -17,10 +19,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <Script src="https://api.tempolabs.ai/proxy-asset?url=https://storage.googleapis.com/tempo-public-assets/error-handling.js" />
+    <html lang="pt-BR" suppressHydrationWarning>
+      <Script src="https://api.tempo.new/proxy-asset?url=https://storage.googleapis.com/tempo-public-assets/error-handling.js" />
       <body className={inter.className}>
-        {children}
+        <Header />
+        <main className="min-h-screen bg-slate-50">{children}</main>
         <TempoInit />
       </body>
     </html>
