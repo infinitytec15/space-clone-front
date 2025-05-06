@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import KpiCard from "@/components/dashboard/KpiCard";
 import ChartSection from "@/components/dashboard/ChartSection";
+import MapContainer from "@/components/dashboard/MapContainer";
 import { Map, Layers, Activity, Target } from "lucide-react";
 
 export default function AnalyticsPage() {
@@ -90,10 +91,8 @@ export default function AnalyticsPage() {
               Mapa de Análise Espacial
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="h-[400px] w-full bg-slate-100 rounded-md flex items-center justify-center text-gray-500">
-              Mapa interativo de análise espacial
-            </div>
+          <CardContent className="p-0">
+            <MapContainer />
           </CardContent>
         </Card>
       </div>

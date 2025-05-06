@@ -2,7 +2,16 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
-import { Circle, Square, MapPin, Layers, MousePointer } from "lucide-react";
+import MapboxDraw from "@mapbox/mapbox-gl-draw";
+import {
+  Circle,
+  Square,
+  MapPin,
+  Layers,
+  MousePointer,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +21,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
+
+// Import Mapbox GL Draw styles
+import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
+import "mapbox-gl/dist/mapbox-gl.css";
 
 interface CompanyData {
   id: string;
@@ -164,10 +177,11 @@ const MapContainer = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [selectedTool, setSelectedTool] = useState<
-    "pointer" | "circle" | "polygon"
+    "pointer" | "circle" | "polygon" | "line" | "trash"
   >("pointer");
   const [mapLoaded, setMapLoaded] = useState(false);
   const [activeDrawing, setActiveDrawing] = useState<any>(null);
+  const drawRef = useRef<MapboxDraw | null>(null);
 
   // Category colors for markers
   const categoryColors: Record<string, string> = {
@@ -190,7 +204,9 @@ const MapContainer = ({
     if (!mapContainer.current || map.current) return;
 
     // Use the Mapbox token from environment variables
-    const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+    const mapboxToken =
+      process.env.NEXT_PUBLIC_MAPBOX_TOKEN ||
+      "pk.eyJ1IjoiZGVtby1zcGFjZWRhdGEiLCJhIjoiY2xzMnRtcWJsMDFvMzJrcGR0ZWRtZGJrZSJ9.YFRdnQJTrXUDnb5Fq6ydcA";
 
     if (!mapboxToken) {
       console.error(
@@ -211,6 +227,66 @@ const MapContainer = ({
       attributionControl: false,
     });
 
+    // Initialize the draw control
+    const draw = new MapboxDraw({
+      displayControlsDefault: false,
+      controls: {
+        polygon: false,
+        line_string: false,
+        point: false,
+        trash: false,
+      },
+      styles: [
+        // Style for points
+        {
+          id: "gl-draw-point",
+          type: "circle",
+          filter: ["all", ["==", "$type", "Point"]],
+          paint: {
+            "circle-color": "#3b82f6",
+            "circle-radius": 5,
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#ffffff",
+          },
+        },
+        // Style for polygon fill
+        {
+          id: "gl-draw-polygon-fill",
+          type: "fill",
+          filter: ["all", ["==", "$type", "Polygon"]],
+          paint: {
+            "fill-color": "#3b82f6",
+            "fill-outline-color": "#3b82f6",
+            "fill-opacity": 0.1,
+          },
+        },
+        // Style for polygon outline
+        {
+          id: "gl-draw-polygon-stroke",
+          type: "line",
+          filter: ["all", ["==", "$type", "Polygon"]],
+          paint: {
+            "line-color": "#3b82f6",
+            "line-width": 2,
+          },
+        },
+        // Style for lines
+        {
+          id: "gl-draw-line",
+          type: "line",
+          filter: ["all", ["==", "$type", "LineString"]],
+          paint: {
+            "line-color": "#3b82f6",
+            "line-width": 2,
+          },
+        },
+      ],
+    });
+
+    // Add the draw control to the map
+    newMap.addControl(draw, "top-left");
+    drawRef.current = draw;
+
     // Add navigation controls
     newMap.addControl(new mapboxgl.NavigationControl(), "top-right");
     newMap.addControl(
@@ -225,6 +301,24 @@ const MapContainer = ({
     // Set up event handlers
     newMap.on("load", () => {
       setMapLoaded(true);
+
+      // Set up draw event listeners
+      newMap.on("draw.create", (e) => {
+        console.log("A drawing was created", e.features);
+        // You can dispatch an event or call a function here
+        handleAreaSelect(e.features);
+      });
+
+      newMap.on("draw.update", (e) => {
+        console.log("A drawing was updated", e.features);
+        // You can dispatch an event or call a function here
+        handleAreaSelect(e.features);
+      });
+
+      newMap.on("draw.delete", (e) => {
+        console.log("A drawing was deleted", e.features);
+        // You can dispatch an event or call a function here
+      });
 
       // Add markers when map is loaded
       markers.forEach((marker) => {
@@ -330,7 +424,9 @@ const MapContainer = ({
     };
   }, [initialCenter, initialZoom, markers, categoryColors, companies]);
 
-  const handleToolSelect = (tool: "pointer" | "circle" | "polygon") => {
+  const handleToolSelect = (
+    tool: "pointer" | "circle" | "polygon" | "line" | "trash",
+  ) => {
     setSelectedTool(tool);
 
     // Clear any active drawing
@@ -338,8 +434,34 @@ const MapContainer = ({
       setActiveDrawing(null);
     }
 
-    // In a real implementation, we would enable the appropriate drawing mode
-    // using something like MapboxDraw
+    if (!map.current || !drawRef.current) return;
+
+    // Disable all draw modes first
+    drawRef.current.changeMode("simple_select");
+
+    // Enable the appropriate drawing mode based on the selected tool
+    switch (tool) {
+      case "pointer":
+        drawRef.current.changeMode("simple_select");
+        break;
+      case "circle":
+        // Note: MapboxDraw doesn't have a built-in circle mode, so we use polygon as a fallback
+        // In a real implementation, you might want to use a custom circle mode plugin
+        drawRef.current.changeMode("draw_polygon");
+        break;
+      case "polygon":
+        drawRef.current.changeMode("draw_polygon");
+        break;
+      case "line":
+        drawRef.current.changeMode("draw_line_string");
+        break;
+      case "trash":
+        drawRef.current.trash();
+        setSelectedTool("pointer");
+        break;
+      default:
+        break;
+    }
   };
 
   const handleAreaSelect = (area: any) => {
@@ -364,48 +486,49 @@ const MapContainer = ({
           }}
         >
           {!mapLoaded && (
-            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground bg-slate-100">
-              <p className="text-lg font-medium">Carregando mapa...</p>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground bg-slate-100">
+              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
+              <p className="text-sm font-medium">Carregando mapa...</p>
             </div>
           )}
         </div>
 
-        {/* Map Controls - Repositioned below the map */}
-        <div className="p-4 border-t flex justify-center gap-3">
+        {/* Map Controls - Modern floating toolbar */}
+        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm px-2 py-1.5 rounded-full shadow-lg border border-gray-100 flex items-center gap-1.5 z-10">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  variant="secondary"
-                  size="sm"
-                  className={`${selectedTool === "pointer" ? "bg-primary text-primary-foreground" : "bg-background"}`}
+                  variant={selectedTool === "pointer" ? "default" : "ghost"}
+                  size="icon"
+                  className={`rounded-full h-9 w-9 ${selectedTool === "pointer" ? "bg-primary text-primary-foreground" : "text-gray-700 hover:bg-gray-100"}`}
                   onClick={() => handleToolSelect("pointer")}
                 >
-                  <MousePointer className="h-4 w-4 mr-2" />
-                  Selecionar
+                  <MousePointer className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Selecionar e interagir com pontos no mapa</p>
+              <TooltipContent side="top" className="font-medium">
+                <p>Selecionar</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+
+          <div className="h-4 w-px bg-gray-200 mx-1"></div>
 
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  variant="secondary"
-                  size="sm"
-                  className={`${selectedTool === "circle" ? "bg-primary text-primary-foreground" : "bg-background"}`}
+                  variant={selectedTool === "circle" ? "default" : "ghost"}
+                  size="icon"
+                  className={`rounded-full h-9 w-9 ${selectedTool === "circle" ? "bg-primary text-primary-foreground" : "text-gray-700 hover:bg-gray-100"}`}
                   onClick={() => handleToolSelect("circle")}
                 >
-                  <Circle className="h-4 w-4 mr-2" />
-                  Círculo
+                  <Circle className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Desenhar um círculo para selecionar área</p>
+              <TooltipContent side="top" className="font-medium">
+                <p>Desenhar círculo</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -414,17 +537,16 @@ const MapContainer = ({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  variant="secondary"
-                  size="sm"
-                  className={`${selectedTool === "polygon" ? "bg-primary text-primary-foreground" : "bg-background"}`}
+                  variant={selectedTool === "polygon" ? "default" : "ghost"}
+                  size="icon"
+                  className={`rounded-full h-9 w-9 ${selectedTool === "polygon" ? "bg-primary text-primary-foreground" : "text-gray-700 hover:bg-gray-100"}`}
                   onClick={() => handleToolSelect("polygon")}
                 >
-                  <Square className="h-4 w-4 mr-2" />
-                  Polígono
+                  <Square className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Desenhar um polígono para selecionar área</p>
+              <TooltipContent side="top" className="font-medium">
+                <p>Desenhar polígono</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -432,78 +554,149 @@ const MapContainer = ({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="secondary" size="sm" className="bg-background">
-                  <Layers className="h-4 w-4 mr-2" />
-                  Camadas
+                <Button
+                  variant={selectedTool === "line" ? "default" : "ghost"}
+                  size="icon"
+                  className={`rounded-full h-9 w-9 ${selectedTool === "line" ? "bg-primary text-primary-foreground" : "text-gray-700 hover:bg-gray-100"}`}
+                  onClick={() => handleToolSelect("line")}
+                >
+                  <Pencil className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Gerenciar camadas do mapa</p>
+              <TooltipContent side="top" className="font-medium">
+                <p>Desenhar linha</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <div className="h-4 w-px bg-gray-200 mx-1"></div>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full h-9 w-9 text-red-500 hover:bg-red-50 hover:text-red-600"
+                  onClick={() => handleToolSelect("trash")}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="font-medium">
+                <p>Apagar seleção</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <div className="h-4 w-px bg-gray-200 mx-1"></div>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full h-9 w-9 text-gray-700 hover:bg-gray-100"
+                >
+                  <Layers className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="font-medium">
+                <p>Camadas do mapa</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
 
-        {/* Map Legend - Enhanced with better styling and more information */}
-        <div className="absolute bottom-4 left-4 bg-white p-4 rounded-lg shadow-lg border border-gray-100">
-          <h4 className="text-sm font-medium mb-3 flex items-center">
-            <span className="inline-block w-2 h-5 bg-primary rounded-full mr-2"></span>
-            Legenda - Categorias
+        {/* Map Legend - Modern collapsible panel */}
+        <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm p-3 rounded-xl shadow-lg border border-gray-100 max-w-[220px] transition-all duration-200 hover:shadow-xl">
+          <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+            <div className="flex items-center">
+              <span className="inline-block w-1.5 h-5 bg-primary rounded-full mr-2"></span>
+              <span>Categorias</span>
+            </div>
+            <Badge
+              variant="outline"
+              className="text-[10px] font-normal py-0 h-5"
+            >
+              {companies.length} empresas
+            </Badge>
           </h4>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2.5">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-blue-600 shadow-sm"></div>
+              <div className="w-3 h-3 rounded-full bg-blue-600 ring-2 ring-blue-100"></div>
               <span className="text-xs font-medium">Varejo</span>
-              <span className="text-xs text-gray-500 ml-auto">
-                {companies.filter((c) => c.category === "varejo").length} pontos
-              </span>
+              <Badge
+                variant="secondary"
+                className="ml-auto text-[10px] font-normal py-0 h-4 min-w-[24px] flex items-center justify-center"
+              >
+                {companies.filter((c) => c.category === "varejo").length}
+              </Badge>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-orange-500 shadow-sm"></div>
+              <div className="w-3 h-3 rounded-full bg-orange-500 ring-2 ring-orange-100"></div>
               <span className="text-xs font-medium">Alimentação</span>
-              <span className="text-xs text-gray-500 ml-auto">
-                {companies.filter((c) => c.category === "alimentacao").length}{" "}
-                pontos
-              </span>
+              <Badge
+                variant="secondary"
+                className="ml-auto text-[10px] font-normal py-0 h-4 min-w-[24px] flex items-center justify-center"
+              >
+                {companies.filter((c) => c.category === "alimentacao").length}
+              </Badge>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-red-500 shadow-sm"></div>
+              <div className="w-3 h-3 rounded-full bg-red-500 ring-2 ring-red-100"></div>
               <span className="text-xs font-medium">Saúde</span>
-              <span className="text-xs text-gray-500 ml-auto">
-                {companies.filter((c) => c.category === "saude").length} pontos
-              </span>
+              <Badge
+                variant="secondary"
+                className="ml-auto text-[10px] font-normal py-0 h-4 min-w-[24px] flex items-center justify-center"
+              >
+                {companies.filter((c) => c.category === "saude").length}
+              </Badge>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-green-600 shadow-sm"></div>
+              <div className="w-3 h-3 rounded-full bg-green-600 ring-2 ring-green-100"></div>
               <span className="text-xs font-medium">Educação</span>
-              <span className="text-xs text-gray-500 ml-auto">
-                {companies.filter((c) => c.category === "educacao").length}{" "}
-                pontos
-              </span>
+              <Badge
+                variant="secondary"
+                className="ml-auto text-[10px] font-normal py-0 h-4 min-w-[24px] flex items-center justify-center"
+              >
+                {companies.filter((c) => c.category === "educacao").length}
+              </Badge>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-indigo-500 shadow-sm"></div>
+              <div className="w-3 h-3 rounded-full bg-indigo-500 ring-2 ring-indigo-100"></div>
               <span className="text-xs font-medium">Tecnologia</span>
-              <span className="text-xs text-gray-500 ml-auto">
-                {companies.filter((c) => c.category === "tecnologia").length}{" "}
-                pontos
-              </span>
+              <Badge
+                variant="secondary"
+                className="ml-auto text-[10px] font-normal py-0 h-4 min-w-[24px] flex items-center justify-center"
+              >
+                {companies.filter((c) => c.category === "tecnologia").length}
+              </Badge>
             </div>
-          </div>
-          <div className="mt-3 pt-2 border-t border-gray-100">
-            <p className="text-xs text-gray-500">
-              Total: {companies.length} empresas
-            </p>
           </div>
         </div>
 
-        {/* Selection Info */}
+        {/* Selection Info - Modern floating notification */}
         {selectedTool !== "pointer" && (
-          <div className="absolute top-4 left-4 bg-background/90 p-3 rounded-md shadow-md">
-            <p className="text-sm">
-              {selectedTool === "circle"
-                ? "Clique e arraste para desenhar um círculo"
-                : "Clique para adicionar pontos ao polígono"}
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black/75 text-white px-4 py-2 rounded-full shadow-lg backdrop-blur-sm animate-fadeIn z-10">
+            <p className="text-xs font-medium flex items-center">
+              {selectedTool === "circle" ? (
+                <>
+                  <Circle className="h-3.5 w-3.5 mr-2 text-blue-300" />
+                  Clique e arraste para desenhar um círculo
+                </>
+              ) : selectedTool === "polygon" ? (
+                <>
+                  <Square className="h-3.5 w-3.5 mr-2 text-blue-300" />
+                  Clique para adicionar pontos ao polígono
+                </>
+              ) : (
+                <>
+                  <Pencil className="h-3.5 w-3.5 mr-2 text-blue-300" />
+                  Clique para adicionar pontos à linha
+                </>
+              )}
             </p>
           </div>
         )}
