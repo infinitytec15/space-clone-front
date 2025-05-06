@@ -9,11 +9,17 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface FilterPanelProps {
   onFilterChange?: (filters: FilterState) => void;
   isCollapsed?: boolean;
-  onToggleCollapse?: () => void;
 }
 
 interface FilterState {
@@ -22,20 +28,25 @@ interface FilterState {
   categorias: string[];
   atividades: string[];
   rendaMedia: string;
+  cnae: string[];
+  faturamento: string;
+  funcionarios: string;
 }
 
 const FilterPanel = ({
   onFilterChange = () => {},
   isCollapsed = false,
-  onToggleCollapse = () => {},
 }: FilterPanelProps) => {
   const [localCollapsed, setLocalCollapsed] = useState(isCollapsed);
   const [filters, setFilters] = useState<FilterState>({
-    cidade: "",
+    cidade: "todas",
     bairros: [],
     categorias: [],
     atividades: [],
     rendaMedia: "todos",
+    cnae: [],
+    faturamento: "todos",
+    funcionarios: "todos",
   });
 
   const [expandedSections, setExpandedSections] = useState({
@@ -43,6 +54,7 @@ const FilterPanel = ({
     categorias: true,
     atividades: false,
     demograficos: false,
+    empresas: true,
   });
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -99,7 +111,7 @@ const FilterPanel = ({
   const toggleCollapse = () => {
     const newState = !localCollapsed;
     setLocalCollapsed(newState);
-    onToggleCollapse();
+    window.dispatchEvent(new CustomEvent("togglefilterpanel"));
   };
 
   const handleCidadeChange = (cidade: string) => {
@@ -146,11 +158,14 @@ const FilterPanel = ({
 
   const clearFilters = () => {
     const newFilters = {
-      cidade: "",
+      cidade: "todas",
       bairros: [],
       categorias: [],
       atividades: [],
       rendaMedia: "todos",
+      cnae: [],
+      faturamento: "todos",
+      funcionarios: "todos",
     };
     setFilters(newFilters);
     setSearchTerm("");
@@ -167,6 +182,9 @@ const FilterPanel = ({
     filters.categorias.length,
     filters.atividades.length,
     filters.rendaMedia !== "todos" ? 1 : 0,
+    filters.cnae.length,
+    filters.faturamento !== "todos" ? 1 : 0,
+    filters.funcionarios !== "todos" ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
   if (localCollapsed) {
@@ -231,19 +249,22 @@ const FilterPanel = ({
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="cidade">Cidade</Label>
-                <select
-                  id="cidade"
+                <Select
                   value={filters.cidade}
-                  onChange={(e) => handleCidadeChange(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onValueChange={handleCidadeChange}
                 >
-                  <option value="">Todas as cidades</option>
-                  {cidades.map((cidade) => (
-                    <option key={cidade} value={cidade}>
-                      {cidade}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Todas as cidades" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas as cidades</SelectItem>
+                    {cidades.map((cidade) => (
+                      <SelectItem key={cidade} value={cidade}>
+                        {cidade}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -393,6 +414,186 @@ const FilterPanel = ({
                     </Label>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <Separator />
+
+        {/* Seção de Empresas */}
+        <div className="space-y-3">
+          <div
+            className="flex justify-between items-center cursor-pointer"
+            onClick={() => toggleSection("empresas")}
+          >
+            <h3 className="font-medium">Empresas</h3>
+            {expandedSections.empresas ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </div>
+
+          {expandedSections.empresas && (
+            <div className="space-y-4">
+              {/* CNAE */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label>CNAE</Label>
+                  {filters.cnae.length > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {filters.cnae.length} selecionados
+                    </span>
+                  )}
+                </div>
+                <Select
+                  value={filters.cnae.length > 0 ? filters.cnae[0] : "todos"}
+                  onValueChange={(value) => {
+                    const newCnae = value && value !== "todos" ? [value] : [];
+                    const newFilters = { ...filters, cnae: newCnae };
+                    setFilters(newFilters);
+                    onFilterChange(newFilters);
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione CNAE" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="47.11-3-02">
+                      Comércio varejista
+                    </SelectItem>
+                    <SelectItem value="56.11-2-01">Restaurantes</SelectItem>
+                    <SelectItem value="86.30-5-03">Serviços médicos</SelectItem>
+                    <SelectItem value="85.13-9-00">
+                      Ensino fundamental
+                    </SelectItem>
+                    <SelectItem value="62.01-5-01">
+                      Desenvolvimento de software
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Faturamento */}
+              <div className="space-y-2">
+                <Label>Faixa de Faturamento</Label>
+                <RadioGroup
+                  value={filters.faturamento}
+                  onValueChange={(value) => {
+                    const newFilters = { ...filters, faturamento: value };
+                    setFilters(newFilters);
+                    onFilterChange(newFilters);
+                  }}
+                  className="space-y-2"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="todos" id="faturamento-todos" />
+                    <Label
+                      htmlFor="faturamento-todos"
+                      className="text-sm cursor-pointer"
+                    >
+                      Todas as faixas
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="micro" id="faturamento-micro" />
+                    <Label
+                      htmlFor="faturamento-micro"
+                      className="text-sm cursor-pointer"
+                    >
+                      Micro (até R$ 360 mil)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="pequeno" id="faturamento-pequeno" />
+                    <Label
+                      htmlFor="faturamento-pequeno"
+                      className="text-sm cursor-pointer"
+                    >
+                      Pequeno (R$ 360 mil - R$ 4,8 milhões)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="medio" id="faturamento-medio" />
+                    <Label
+                      htmlFor="faturamento-medio"
+                      className="text-sm cursor-pointer"
+                    >
+                      Médio (R$ 4,8 milhões - R$ 300 milhões)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="grande" id="faturamento-grande" />
+                    <Label
+                      htmlFor="faturamento-grande"
+                      className="text-sm cursor-pointer"
+                    >
+                      Grande (acima de R$ 300 milhões)
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* Funcionários */}
+              <div className="space-y-2">
+                <Label>Número de Funcionários</Label>
+                <RadioGroup
+                  value={filters.funcionarios}
+                  onValueChange={(value) => {
+                    const newFilters = { ...filters, funcionarios: value };
+                    setFilters(newFilters);
+                    onFilterChange(newFilters);
+                  }}
+                  className="space-y-2"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="todos" id="funcionarios-todos" />
+                    <Label
+                      htmlFor="funcionarios-todos"
+                      className="text-sm cursor-pointer"
+                    >
+                      Todas as faixas
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="micro" id="funcionarios-micro" />
+                    <Label
+                      htmlFor="funcionarios-micro"
+                      className="text-sm cursor-pointer"
+                    >
+                      Micro (até 9 funcionários)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="pequeno" id="funcionarios-pequeno" />
+                    <Label
+                      htmlFor="funcionarios-pequeno"
+                      className="text-sm cursor-pointer"
+                    >
+                      Pequeno (10 a 49 funcionários)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="medio" id="funcionarios-medio" />
+                    <Label
+                      htmlFor="funcionarios-medio"
+                      className="text-sm cursor-pointer"
+                    >
+                      Médio (50 a 99 funcionários)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="grande" id="funcionarios-grande" />
+                    <Label
+                      htmlFor="funcionarios-grande"
+                      className="text-sm cursor-pointer"
+                    >
+                      Grande (100+ funcionários)
+                    </Label>
+                  </div>
+                </RadioGroup>
               </div>
             </div>
           )}

@@ -3,9 +3,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronRight, Home, Filter } from "lucide-react";
+import { ChevronRight, Home, Filter, Download, BarChart } from "lucide-react";
 import Link from "next/link";
 import SociodemografiaKpiCards from "@/components/cidades-sociodemografia/KpiCards";
+import AgePyramidChart from "@/components/cidades-sociodemografia/AgePyramidChart";
+import PopulationEvolutionChart from "@/components/cidades-sociodemografia/PopulationEvolutionChart";
+import VerticalizationChart from "@/components/cidades-sociodemografia/VerticalizationChart";
 
 export default function CidadesSociodemografia() {
   // Estados para os filtros
@@ -15,6 +18,12 @@ export default function CidadesSociodemografia() {
   const [setorCensitario, setSetorCensitario] = useState("");
   const [loading, setLoading] = useState(false);
   const [kpiData, setKpiData] = useState(null);
+  const [chartData, setChartData] = useState({
+    agePyramid: null,
+    populationEvolution: null,
+    verticalization: null,
+  });
+  const [showSidePanel, setShowSidePanel] = useState(false);
 
   // Dados de exemplo para as opções de filtro
   const estados = ["SP", "RJ", "MG", "RS", "PR", "SC", "BA"];
@@ -107,7 +116,55 @@ export default function CidadesSociodemografia() {
         },
       };
 
+      // Dados simulados para os gráficos
+      const chartDataSimulado = {
+        agePyramid: {
+          maleData: [5, 8, 12, 15, 18, 14, 10, 7, 4],
+          femaleData: [-5, -9, -13, -16, -19, -15, -12, -9, -6],
+          ageGroups: [
+            "0-9",
+            "10-19",
+            "20-29",
+            "30-39",
+            "40-49",
+            "50-59",
+            "60-69",
+            "70-79",
+            "80+",
+          ],
+        },
+        populationEvolution: {
+          years: ["2010", "2012", "2014", "2016", "2018", "2020", "2022"],
+          population:
+            estado === "SP"
+              ? [
+                  41000000, 42500000, 43800000, 44700000, 45300000, 45600000,
+                  45900000,
+                ]
+              : [
+                  15000000, 15500000, 16000000, 16300000, 16700000, 17000000,
+                  17300000,
+                ],
+          growthRate: [null, 3.7, 3.1, 2.1, 1.3, 0.7, 0.6],
+        },
+        verticalization: {
+          regions:
+            cidade === "São Paulo"
+              ? ["Centro", "Zona Norte", "Zona Sul", "Zona Oeste", "Zona Leste"]
+              : ["Centro", "Zona Norte", "Zona Sul", "Zona Oeste", "Baixada"],
+          apartmentPercentage:
+            cidade === "São Paulo"
+              ? [78, 45, 68, 52, 35]
+              : [65, 40, 72, 48, 30],
+          housePercentage:
+            cidade === "São Paulo"
+              ? [22, 55, 32, 48, 65]
+              : [35, 60, 28, 52, 70],
+        },
+      };
+
       setKpiData(dadosSimulados);
+      setChartData(chartDataSimulado);
       setLoading(false);
     }, 800);
   };
@@ -234,7 +291,121 @@ export default function CidadesSociodemografia() {
 
         {/* KPI Cards Section */}
         {kpiData ? (
-          <SociodemografiaKpiCards data={kpiData} />
+          <>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">
+                Indicadores Sociodemográficos
+              </h2>
+              <Button
+                variant="outline"
+                onClick={() => setShowSidePanel(!showSidePanel)}
+                className="flex items-center gap-2"
+              >
+                <BarChart className="h-4 w-4" />
+                {showSidePanel ? "Ocultar Painel" : "Exportar Dados"}
+              </Button>
+            </div>
+
+            <SociodemografiaKpiCards data={kpiData} />
+
+            {/* Charts Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+              <AgePyramidChart data={chartData.agePyramid} loading={loading} />
+              <PopulationEvolutionChart
+                data={chartData.populationEvolution}
+                loading={loading}
+              />
+              <div className="lg:col-span-2">
+                <VerticalizationChart
+                  data={chartData.verticalization}
+                  loading={loading}
+                />
+              </div>
+            </div>
+
+            {/* Side Panel for Data Export */}
+            {showSidePanel && (
+              <div className="fixed right-0 top-0 h-full w-80 bg-white dark:bg-gray-900 shadow-lg border-l p-4 z-20 overflow-y-auto transition-all duration-300 ease-in-out">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-semibold">Exportar Dados</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowSidePanel(false)}
+                  >
+                    ✕
+                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="border rounded-md p-3">
+                    <h4 className="font-medium mb-2">Dados Demográficos</h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full flex items-center gap-2"
+                    >
+                      <Download className="h-4 w-4" /> Baixar CSV
+                    </Button>
+                  </div>
+
+                  <div className="border rounded-md p-3">
+                    <h4 className="font-medium mb-2">Pirâmide Etária</h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full flex items-center gap-2 mb-2"
+                    >
+                      <Download className="h-4 w-4" /> Baixar PNG
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full flex items-center gap-2"
+                    >
+                      <Download className="h-4 w-4" /> Baixar CSV
+                    </Button>
+                  </div>
+
+                  <div className="border rounded-md p-3">
+                    <h4 className="font-medium mb-2">Evolução Populacional</h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full flex items-center gap-2 mb-2"
+                    >
+                      <Download className="h-4 w-4" /> Baixar PNG
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full flex items-center gap-2"
+                    >
+                      <Download className="h-4 w-4" /> Baixar CSV
+                    </Button>
+                  </div>
+
+                  <div className="border rounded-md p-3">
+                    <h4 className="font-medium mb-2">Verticalização</h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full flex items-center gap-2 mb-2"
+                    >
+                      <Download className="h-4 w-4" /> Baixar PNG
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full flex items-center gap-2"
+                    >
+                      <Download className="h-4 w-4" /> Baixar CSV
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-lg border shadow-sm">
             <p className="text-muted-foreground">
