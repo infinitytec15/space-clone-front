@@ -397,7 +397,9 @@ const MapContainer = ({
               detailsBtn.addEventListener("click", (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                // Dispatch custom event instead of calling prop function
+                // Close the popup when details button is clicked
+                marker.togglePopup();
+                // Dispatch custom event to open side panel with company details
                 window.dispatchEvent(
                   new CustomEvent("markerselect", { detail: company }),
                 );

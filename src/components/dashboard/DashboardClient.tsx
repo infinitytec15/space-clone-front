@@ -45,6 +45,7 @@ export default function DashboardClient() {
     };
     const handleMarkerSelect = (event: CustomEvent) => {
       if (event.detail) {
+        console.log("Marker selected:", event.detail);
         openSidePanel(event.detail as CompanyData);
       }
     };
