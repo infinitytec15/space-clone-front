@@ -11,7 +11,14 @@ import {
   MousePointer,
   Pencil,
   Trash2,
+  Search,
+  ChevronDown,
 } from "lucide-react";
+import {
+  brazilianStates,
+  brazilianCities,
+  getCitiesByState,
+} from "@/lib/data/brazilianStatesAndCities";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +28,17 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { useDashboardStore } from "@/lib/zustand/dashboardStore";
 
 // Import Mapbox GL Draw styles
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
@@ -183,6 +201,15 @@ const MapContainer = ({
   const [activeDrawing, setActiveDrawing] = useState<any>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
   const [customMarkers, setCustomMarkers] = useState<mapboxgl.Marker[]>([]);
+
+  // Estado e município selecionados
+  const [selectedState, setSelectedState] = useState<string>("");
+  const [selectedCity, setSelectedCity] = useState<string>("");
+  const [citiesInState, setCitiesInState] = useState<string[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Referência para o marcador do município selecionado
+  const municipalityMarkerRef = useRef<mapboxgl.Marker | null>(null);
 
   // Category colors for markers
   const categoryColors: Record<string, string> = {
@@ -399,9 +426,11 @@ const MapContainer = ({
                 e.stopPropagation();
                 // Close the popup when details button is clicked
                 marker.togglePopup();
-                // Dispatch custom event to open side panel with company details
-                window.dispatchEvent(
-                  new CustomEvent("markerselect", { detail: company }),
+                // Use the Zustand store to open the side panel with company details
+                import("@/lib/zustand/dashboardStore").then(
+                  ({ useDashboardStore }) => {
+                    useDashboardStore.getState().openSidePanel(company);
+                  },
                 );
               });
             }
@@ -435,10 +464,19 @@ const MapContainer = ({
     // Disable all draw modes first
     drawRef.current.changeMode("simple_select");
 
+    // Remove the click event for adding points regardless of the tool
+    if (map.current) {
+      map.current.off("click", addPointOnClick);
+    }
+
     // Enable the appropriate drawing mode based on the selected tool
     switch (tool) {
       case "pointer":
         drawRef.current.changeMode("simple_select");
+        // Add click event for adding points only in pointer mode
+        if (map.current) {
+          map.current.on("click", addPointOnClick);
+        }
         break;
       case "circle":
         // Note: MapboxDraw doesn't have a built-in circle mode, so we use polygon as a fallback
@@ -454,17 +492,13 @@ const MapContainer = ({
       case "trash":
         drawRef.current.trash();
         setSelectedTool("pointer");
+        // Re-enable pointer mode after trash operation
+        if (map.current) {
+          map.current.on("click", addPointOnClick);
+        }
         break;
       default:
         break;
-    }
-
-    // Adiciona um evento de clique no mapa para adicionar pontos quando estiver no modo pointer
-    if (tool === "pointer" && map.current) {
-      map.current.on("click", addPointOnClick);
-    } else if (map.current) {
-      // Remove o evento de clique quando não estiver no modo pointer
-      map.current.off("click", addPointOnClick);
     }
   };
 
@@ -543,9 +577,156 @@ const MapContainer = ({
     });
   };
 
+  // Efeito para escutar eventos de seleção de município do FilterPanel
+  useEffect(() => {
+    const handleMunicipioSelect = (event: CustomEvent) => {
+      if (event.detail && map.current) {
+        const { estado, municipio } = event.detail;
+
+        // Buscar o nome do município a partir do ID (usando dados locais)
+        // Como estamos usando dados locais, o ID é o próprio nome do município
+        const cidadesDoEstado = getCitiesByState(estado);
+        const cidadeSelecionada = {
+          nome: cidadesDoEstado[
+            parseInt(municipio.slice(-5)) % cidadesDoEstado.length
+          ],
+        };
+        if (cidadeSelecionada) {
+          // Geocodificar o município
+          geocodeMunicipality(estado, cidadeSelecionada.nome);
+        }
+      }
+    };
+
+    // Adicionar listener para o evento municipioselect
+    window.addEventListener(
+      "municipioselect",
+      handleMunicipioSelect as EventListener,
+    );
+
+    return () => {
+      // Remover listener quando o componente for desmontado
+      window.removeEventListener(
+        "municipioselect",
+        handleMunicipioSelect as EventListener,
+      );
+    };
+  }, [map]);
+
+  // Função para geocodificar um município e centralizar o mapa
+  const geocodeMunicipality = async (
+    estado?: string,
+    nomeMunicipio?: string,
+  ) => {
+    // Se não foram passados parâmetros, usar os valores do estado local
+    const estadoParam = estado || selectedState;
+    const municipioParam = nomeMunicipio || selectedCity;
+
+    if (!estadoParam || !municipioParam || !map.current) return;
+
+    setIsSearching(true);
+
+    try {
+      // Buscar o nome do estado a partir do código
+      const estadoObj = brazilianStates.find((e) => e.code === estadoParam);
+      const nomeEstado = estadoObj ? estadoObj.name : estadoParam;
+
+      // Construir a consulta de geocodificação
+      const query = `${municipioParam}, ${nomeEstado}, Brazil`;
+
+      // Usar a API de geocodificação do Mapbox
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${mapboxgl.accessToken}&country=br&types=place`,
+      );
+
+      const data = await response.json();
+
+      if (data.features && data.features.length > 0) {
+        const [lng, lat] = data.features[0].center;
+
+        // Remover marcador anterior se existir
+        if (municipalityMarkerRef.current) {
+          municipalityMarkerRef.current.remove();
+        }
+
+        // Criar elemento para o marcador
+        const el = document.createElement("div");
+        el.className =
+          "w-8 h-8 bg-primary rounded-full ring-4 ring-white shadow-lg flex items-center justify-center";
+
+        // Adicionar ícone ao marcador
+        const iconElement = document.createElement("span");
+        iconElement.className = "text-white text-xs font-bold";
+        iconElement.textContent = "M";
+        el.appendChild(iconElement);
+
+        // Criar popup com informações do município
+        const popup = new mapboxgl.Popup({
+          offset: 25,
+          closeButton: true,
+          closeOnClick: true,
+          maxWidth: "300px",
+        }).setHTML(
+          `<div class="p-3 bg-white rounded-lg shadow-md">
+            <h3 class="font-bold text-sm mb-1">${municipioParam}</h3>
+            <p class="text-xs text-gray-600 mb-1">${nomeEstado}</p>
+            <p class="text-xs text-gray-600">Coordenadas: ${lng.toFixed(4)}, ${lat.toFixed(4)}</p>
+          </div>`,
+        );
+
+        // Criar e adicionar o marcador ao mapa
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat([lng, lat])
+          .setPopup(popup)
+          .addTo(map.current);
+
+        // Abrir o popup automaticamente
+        marker.togglePopup();
+
+        // Guardar referência ao marcador
+        municipalityMarkerRef.current = marker;
+
+        // Centralizar o mapa na localização
+        map.current.flyTo({
+          center: [lng, lat],
+          zoom: 10,
+          essential: true,
+        });
+      } else {
+        console.error("Município não encontrado");
+        alert("Município não encontrado. Verifique o nome e tente novamente.");
+      }
+    } catch (error) {
+      console.error("Erro ao geocodificar município:", error);
+      alert("Erro ao buscar município. Tente novamente mais tarde.");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   return (
     <Card className="w-full h-full bg-background border rounded-lg overflow-hidden shadow-md">
       <div className="relative w-full h-full">
+        {/* Instrução para usar o painel de filtros */}
+        <div className="absolute top-4 left-4 right-4 z-20 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg border border-gray-100 p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <MapPin className="h-4 w-4 mr-2 text-primary" />
+              <p className="text-sm">
+                Use o painel de filtros para selecionar estados e municípios
+              </p>
+            </div>
+            {isSearching && (
+              <div className="flex items-center">
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2"></div>
+                <span className="text-xs text-muted-foreground">
+                  Buscando localização...
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Map Container */}
         <div
           ref={mapContainer}

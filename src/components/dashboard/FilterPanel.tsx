@@ -1,7 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
-import { Search, ChevronDown, ChevronUp, X, Filter } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import {
+  Search,
+  ChevronDown,
+  ChevronUp,
+  X,
+  Filter,
+  MapPin,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,10 +19,18 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+// Import local data instead of external library
+import {
+  brazilianStates,
+  brazilianCities,
+  getCitiesByState,
+} from "@/lib/data/brazilianStatesAndCities";
 
 interface FilterPanelProps {
   onFilterChange?: (filters: FilterState) => void;
@@ -31,6 +46,8 @@ interface FilterState {
   cnae: string[];
   faturamento: string;
   funcionarios: string;
+  estado: string;
+  municipio: string;
 }
 
 const FilterPanel = ({
@@ -47,6 +64,8 @@ const FilterPanel = ({
     cnae: [],
     faturamento: "todos",
     funcionarios: "todos",
+    estado: "",
+    municipio: "",
   });
 
   const [expandedSections, setExpandedSections] = useState({
@@ -55,18 +74,16 @@ const FilterPanel = ({
     atividades: false,
     demograficos: false,
     empresas: true,
+    geolocalizacao: true,
   });
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [cidadesDoEstado, setCidadesDoEstado] = useState<
+    Array<{ id: string; nome: string }>
+  >([]);
+  const [isSearching, setIsSearching] = useState(false);
 
-  // Dados de exemplo
-  const cidades = [
-    "São Paulo",
-    "Rio de Janeiro",
-    "Belo Horizonte",
-    "Brasília",
-    "Salvador",
-  ];
+  // Dados de exemplo para bairros
   const bairros = [
     "Centro",
     "Jardins",
@@ -156,6 +173,47 @@ const FilterPanel = ({
     onFilterChange(newFilters);
   };
 
+  // Efeito para carregar cidades quando um estado é selecionado
+  useEffect(() => {
+    if (filters.estado) {
+      try {
+        // Usar dados locais em vez da biblioteca externa
+        const cidadesDoEstado = getCitiesByState(filters.estado);
+        const cidadesFormatadas = cidadesDoEstado.map((nome, index) => ({
+          id: `${filters.estado}${index + 1}`.padStart(7, "0"),
+          nome: nome,
+        }));
+        setCidadesDoEstado(cidadesFormatadas);
+      } catch (error) {
+        console.error("Erro ao carregar cidades:", error);
+        setCidadesDoEstado([]);
+      }
+    } else {
+      setCidadesDoEstado([]);
+    }
+  }, [filters.estado]);
+
+  const handleEstadoChange = (estado: string) => {
+    const newFilters = { ...filters, estado, municipio: "" };
+    setFilters(newFilters);
+    onFilterChange(newFilters);
+  };
+
+  const handleMunicipioChange = (municipio: string) => {
+    const newFilters = { ...filters, municipio };
+    setFilters(newFilters);
+    onFilterChange(newFilters);
+
+    // Dispatch event to mark the city on the map
+    if (municipio && filters.estado) {
+      window.dispatchEvent(
+        new CustomEvent("municipioselect", {
+          detail: { estado: filters.estado, municipio },
+        }),
+      );
+    }
+  };
+
   const clearFilters = () => {
     const newFilters = {
       cidade: "todas",
@@ -166,6 +224,8 @@ const FilterPanel = ({
       cnae: [],
       faturamento: "todos",
       funcionarios: "todos",
+      estado: "",
+      municipio: "",
     };
     setFilters(newFilters);
     setSearchTerm("");
@@ -231,6 +291,75 @@ const FilterPanel = ({
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        {/* Seção de Geolocalização */}
+        <div className="space-y-3">
+          <div
+            className="flex justify-between items-center cursor-pointer"
+            onClick={() => toggleSection("geolocalizacao")}
+          >
+            <h3 className="font-medium flex items-center">
+              <MapPin className="h-4 w-4 mr-1.5" />
+              Geolocalização
+            </h3>
+            {expandedSections.geolocalizacao ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </div>
+
+          {expandedSections.geolocalizacao && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="estado">Estado</Label>
+                <Select
+                  value={filters.estado}
+                  onValueChange={handleEstadoChange}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione um estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Estados</SelectLabel>
+                      {brazilianStates.map((estado) => (
+                        <SelectItem key={estado.code} value={estado.code}>
+                          {estado.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="municipio">Município</Label>
+                <Select
+                  value={filters.municipio}
+                  onValueChange={handleMunicipioChange}
+                  disabled={!filters.estado || cidadesDoEstado.length === 0}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione um município" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Municípios</SelectLabel>
+                      {cidadesDoEstado.map((cidade) => (
+                        <SelectItem key={cidade.id} value={cidade.id}>
+                          {cidade.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <Separator />
+
         {/* Seção de Localização */}
         <div className="space-y-3">
           <div
@@ -258,7 +387,13 @@ const FilterPanel = ({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todas">Todas as cidades</SelectItem>
-                    {cidades.map((cidade) => (
+                    {[
+                      "São Paulo",
+                      "Rio de Janeiro",
+                      "Belo Horizonte",
+                      "Brasília",
+                      "Salvador",
+                    ].map((cidade) => (
                       <SelectItem key={cidade} value={cidade}>
                         {cidade}
                       </SelectItem>

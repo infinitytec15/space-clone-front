@@ -7,6 +7,13 @@ type DashboardStore = {
   selectedCompany: CompanyData | null;
   openSidePanel: (company: CompanyData) => void;
   closeSidePanel: () => void;
+
+  // Location state
+  selectedState: string;
+  selectedCity: string;
+  setSelectedState: (state: string) => void;
+  setSelectedCity: (city: string) => void;
+  resetLocationSelection: () => void;
 };
 
 export const useDashboardStore = create<DashboardStore>((set) => ({
@@ -18,4 +25,13 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
   openSidePanel: (company) =>
     set({ isSidePanelOpen: true, selectedCompany: company }),
   closeSidePanel: () => set({ isSidePanelOpen: false }),
+
+  // Location initial state
+  selectedState: "",
+  selectedCity: "",
+
+  // Location actions
+  setSelectedState: (state) => set({ selectedState: state, selectedCity: "" }),
+  setSelectedCity: (city) => set({ selectedCity: city }),
+  resetLocationSelection: () => set({ selectedState: "", selectedCity: "" }),
 }));

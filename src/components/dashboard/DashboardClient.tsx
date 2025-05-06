@@ -59,6 +59,44 @@ export default function DashboardClient() {
         });
       }
     };
+    const handleMunicipioSelect = (event: CustomEvent) => {
+      if (event.detail) {
+        const { estado, municipio } = event.detail;
+        // Usar dados locais em vez de bibliotecas externas
+        try {
+          // Buscar o estado
+          const estadoObj = brazilianStates.find((e) => e.code === estado);
+          const nomeEstado = estadoObj ? estadoObj.name : estado;
+
+          // Buscar o município
+          const cidadesDoEstado = getCitiesByState(estado);
+          // Como estamos usando IDs gerados, extraímos o índice do final do ID
+          const index = parseInt(municipio.slice(-5)) % cidadesDoEstado.length;
+          const nomeMunicipio = cidadesDoEstado[index];
+
+          if (nomeMunicipio) {
+            toast({
+              title: "Município selecionado",
+              description: `Visualizando ${nomeMunicipio}, ${nomeEstado}`,
+              variant: "default",
+            });
+          } else {
+            toast({
+              title: "Município selecionado",
+              description: `Visualizando município em ${nomeEstado}`,
+              variant: "default",
+            });
+          }
+        } catch (err) {
+          console.error("Erro ao carregar dados de municípios:", err);
+          toast({
+            title: "Município selecionado",
+            description: `Visualizando município ${municipio}`,
+            variant: "default",
+          });
+        }
+      }
+    };
 
     window.addEventListener("closefilterpanel", handleCloseFilterPanel);
     window.addEventListener("togglefilterpanel", handleToggleFilterPanel);
@@ -73,6 +111,10 @@ export default function DashboardClient() {
     window.addEventListener(
       "regionselect",
       handleRegionSelect as EventListener,
+    );
+    window.addEventListener(
+      "municipioselect",
+      handleMunicipioSelect as EventListener,
     );
 
     return () => {
@@ -89,6 +131,10 @@ export default function DashboardClient() {
       window.removeEventListener(
         "regionselect",
         handleRegionSelect as EventListener,
+      );
+      window.removeEventListener(
+        "municipioselect",
+        handleMunicipioSelect as EventListener,
       );
     };
   }, [filterPanelOpen, toast, openSidePanel]);
