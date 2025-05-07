@@ -1,7 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "../../../components/ui/button";
+import React, { useState } from "react";
+import { AdminDashboardLayout } from "@/layouts/AdminDashboardLayout";
+import {
+  Bell,
+  Globe,
+  Palette,
+  Save,
+  Server,
+  Shield,
+  Upload,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -9,34 +18,20 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "../../../components/ui/card";
-import { Input } from "../../../components/ui/input";
-import { Label } from "../../../components/ui/label";
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../components/ui/select";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../../../components/ui/tabs";
-import { Switch } from "../../../components/ui/switch";
-import { Separator } from "../../../components/ui/separator";
-import {
-  Upload,
-  Save,
-  Globe,
-  Palette,
-  Bell,
-  Shield,
-  Server,
-} from "lucide-react";
-import AdminDashboardLayout from "../../../layouts/AdminDashboardLayout";
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ConfiguracoesPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
